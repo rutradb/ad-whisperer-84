@@ -1,0 +1,1 @@
+ALTER FUNCTION update_saved_reports_updated_at() SET search_path = public;

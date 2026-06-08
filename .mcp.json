@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "zernio": {
+      "type": "http",
+      "url": "https://mcp.zernio.com/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_0283023c2420351a6f779ac62d782464bad616bffb25de052a6dfbc81c28f9ff"
+      }
+    }
+  }
+}

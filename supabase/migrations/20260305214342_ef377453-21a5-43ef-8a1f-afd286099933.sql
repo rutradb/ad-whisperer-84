@@ -1,0 +1,1 @@
+ALTER FUNCTION update_targeting_templates_updated_at() SET search_path = public;

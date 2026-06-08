@@ -1,0 +1,1 @@
+Yes, `ad_group_ad.ad.policy_summary` exists. It includes `approval_status` and `review_status`.

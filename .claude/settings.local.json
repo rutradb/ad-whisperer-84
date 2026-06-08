@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__composio__COMPOSIO_SEARCH_TOOLS",
+      "mcp__composio__COMPOSIO_MANAGE_CONNECTIONS",
+      "mcp__composio__COMPOSIO_WAIT_FOR_CONNECTIONS",
+      "mcp__claude_ai_Supabase__list_projects",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+diff --git a/src/components/AttributionSelector.tsx b/src/components/AttributionSelector.tsx
+index d863106..240466d 100644
+--- a/src/components/AttributionSelector.tsx
++++ b/src/components/AttributionSelector.tsx
+@@ -1,11 +1,26 @@
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ 
++/**
++ * Janelas de atribuição válidas na Graph API v22.0.
++ * Facebook removeu as janelas de 28 dias (28d_click, 28d_view) a partir da v18.0.
++ */
++export const VALID_ATTRIBUTION_WINDOWS = [
++  "1d_click",
++  "7d_click",
++  "1d_view",
++  "7d_view",
++] as const;
++
++export type AttributionWindow = (typeof VALID_ATTRIBUTION_WINDOWS)[number];
++
+ const ATTRIBUTION_OPTIONS = [
++  { value: "7d_click,1d_view", label: "7d clique + 1d view (Padrão)" },
+   { value: "1d_click", label: "1 dia clique" },
+   { value: "7d_click", label: "7 dias clique" },
+-  { value: "28d_click", label: "28 dias clique" },
+   { value: "1d_view", label: "1 dia view" },
+-  { value: "7d_click,1d_view", label: "7d clique + 1d view" },
++  { value: "7d_view", label: "7 dias view" },
++  { value: "7d_click,7d_view", label: "7d clique + 7d view" },
++  { value: "1d_click,1d_view", label: "1d clique + 1d view" },
+ ];
+ 
+ interface AttributionSelectorProps {
+@@ -13,10 +28,27 @@ interface AttributionSelectorProps {
+   onChange: (value: string) => void;
+ }
+ 
++/**
++ * Recebe uma string comma-separated, faz o split e filtra
++ * apenas janelas válidas da API v22.0.
++ */
++export function parseAttributionWindows(raw: string): AttributionWindow[] {
++  if (!raw) return ["7d_click", "1d_view"];
++
++  const parsed = raw
++    .split(",")
++    .map((s) => s.trim())
++    .filter((s): s is AttributionWindow =>
++      VALID_ATTRIBUTION_WINDOWS.includes(s as AttributionWindow)
++    );
++
++  return parsed.length > 0 ? parsed : ["7d_click", "1d_view"];
++}
++
+ export function AttributionSelector({ value, onChange }: AttributionSelectorProps) {
+   return (
+     <Select value={value} onValueChange={onChange}>
+-      <SelectTrigger className="w-[200px]">
++      <SelectTrigger className="w-[220px]">
+         <SelectValue placeholder="Atribuição" />
+       </SelectTrigger>
+       <SelectContent>
+diff --git a/src/pages/DashboardPage.tsx b/src/pages/DashboardPage.tsx
+index f35e2b9..071813f 100644
+--- a/src/pages/DashboardPage.tsx
++++ b/src/pages/DashboardPage.tsx
+@@ -13,7 +13,7 @@ import { KpiCardWithDelta } from "@/components/KpiCardWithDelta";
+ import { ExportButton } from "@/components/ExportButton";
+ import { getPreviousPeriodRange, calculateDelta, isDeltaPositive } from "@/lib/periodUtils";
+ import type { DatePreset } from "@/lib/periodUtils";
+-import { AttributionSelector } from "@/components/AttributionSelector";
++import { AttributionSelector, parseAttributionWindows } from "@/components/AttributionSelector";
+ 
+ const DATE_PRESETS = [
+   { label: "7 dias", value: "last_7d" as DatePreset },
+@@ -67,7 +67,7 @@ export default function DashboardPage() {
+   // KPI data
+   const { data: kpiData, isLoading: kpiLoading } = useAccountInsights(
+     accountId ?? undefined,
+-    { fields: INSIGHT_FIELDS, date_preset: datePreset, level: "account", action_attribution_windows: attribution.split(",") }
++    { fields: INSIGHT_FIELDS, date_preset: datePreset, level: "account", action_attribution_windows: parseAttributionWindows(attribution) }
+   );
+ 
+   // Previous period for comparison
