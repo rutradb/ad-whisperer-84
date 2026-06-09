@@ -38,6 +38,7 @@ const CreativeEditPage = lazy(() => import("./pages/CreativeEditPage"));
 const ScaleCalculatorPage = lazy(() => import("./pages/ScaleCalculatorPage"));
 const OptimizerPage = lazy(() => import("./pages/OptimizerPage"));
 const DiagnosticPage = lazy(() => import("./pages/DiagnosticPage"));
+const StrategicScanPage = lazy(() => import("./pages/StrategicScanPage"));
 const AICopyGeneratorPage = lazy(() => import("./pages/AICopyGeneratorPage"));
 const ActivityLogPage = lazy(() => import("./pages/ActivityLogPage"));
 const AutomatedRulesPage = lazy(() => import("./pages/AutomatedRulesPage"));
@@ -124,6 +125,7 @@ const App = () => (
                 {/* AI & Automation */}
                 <Route path="/ai/optimizer" element={<OptimizerPage />} />
                 <Route path="/ai/diagnostic" element={<DiagnosticPage />} />
+                <Route path="/ai/strategic-scan" element={<StrategicScanPage />} />
                 <Route path="/ai/scale-calculator" element={<ScaleCalculatorPage />} />
                 <Route path="/ai/copy-generator" element={<AICopyGeneratorPage />} />
                 <Route path="/ai/rules" element={<AutomatedRulesPage />} />
