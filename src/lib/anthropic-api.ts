@@ -106,7 +106,7 @@ export async function generateAdCopy(input: CopyGeneratorInput): Promise<CopyVar
       "anthropic-dangerous-direct-browser-access": "true",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5",
       max_tokens: 4096,
       system: buildSystemPrompt(),
       messages: [{ role: "user", content: buildUserPrompt(input) }],
