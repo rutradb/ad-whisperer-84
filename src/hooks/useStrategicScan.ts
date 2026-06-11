@@ -14,15 +14,11 @@ export function useStrategicScan() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasApiKey = !!anthropicApiKey;
+  const hasApiKey = true;
   const isConnected = !!selectedCustomer?.id;
 
   const run = useCallback(
     async (dateRange: DateRange | string = "LAST_30_DAYS", options?: ScanOptions) => {
-      if (!anthropicApiKey) {
-        setError("Configure a chave da API Anthropic em Configurações > Integrações.");
-        return;
-      }
       if (!selectedCustomer?.id) {
         setError("Nenhuma conta Google Ads conectada.");
         return;

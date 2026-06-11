@@ -214,7 +214,7 @@ export async function gatherScanData(
 // --- Invocação da edge function ------------------------------------------------
 
 export async function runStrategicScan(input: {
-  apiKey: string;
+  apiKey?: string | null;
   data: ScanData;
   businessContext?: string;
   options?: ScanOptions;

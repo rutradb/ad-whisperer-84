@@ -32,7 +32,7 @@ export function useAgent() {
 
   const sendMessage = useCallback(
     async (userText: string) => {
-      if (!anthropicApiKey || !selectedAccount) return;
+      if (!selectedAccount) return;
 
       const userMsg: AgentMessage = {
         id: crypto.randomUUID(),
@@ -160,7 +160,7 @@ export function useAgent() {
     apiHistoryRef.current = [];
   }, []);
 
-  const hasApiKey = !!anthropicApiKey;
+  const hasApiKey = true;
   const isConnected = !!selectedAccount;
 
   return {
