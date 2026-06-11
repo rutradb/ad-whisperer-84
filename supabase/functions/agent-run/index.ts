@@ -17,6 +17,7 @@
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
@@ -78,6 +79,10 @@ Deno.serve(async (req) => {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
+      console.error("[agent-run] Anthropic API error:", {
+        status: res.status,
+        body: data,
+      });
       const msg =
         (data as { error?: { message?: string } })?.error?.message ||
         `Erro na API Anthropic (${res.status})`;
@@ -87,6 +92,7 @@ Deno.serve(async (req) => {
     // Devolve a resposta bruta da Anthropic (stop_reason + content[]).
     return json(data, 200);
   } catch (err) {
+    console.error("[agent-run] Unhandled error:", err);
     return json({ error: (err as Error).message }, 500);
   }
 });
