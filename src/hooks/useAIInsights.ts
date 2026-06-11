@@ -4,7 +4,7 @@ import { useBusinessContextStore } from "@/store/useBusinessContextStore";
 import { buildBusinessContextBlock } from "@/lib/agent/buildBusinessContextBlock";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-5";
+const MODEL = "claude-sonnet-4-6";
 
 export type InsightType = "warning" | "opportunity" | "info" | "action";
 
