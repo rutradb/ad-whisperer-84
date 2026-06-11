@@ -42,6 +42,55 @@ export async function executeExpandedToolCall(
   const { accountId } = context;
 
   switch (toolName) {
+    // --- Ação ativa: cria uma PROPOSTA (não executa) ---
+    case "propose_actions": {
+      const { createActionPlan } = await import("./proposals");
+      const loginCustomerId =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("gads_login_customer_id")
+          : null;
+      const res = await createActionPlan({
+        customerId: accountId,
+        loginCustomerId,
+        title: toolInput.title,
+        rationale: toolInput.rationale,
+        riskTier: toolInput.risk_tier,
+        estimatedImpact: toolInput.estimated_impact,
+        actions: toolInput.actions ?? [],
+      });
+
+      // Autonomia: auto-aprova + executa se o tier for elegível (kill-switch off por padrão)
+      const { shouldAutoApprove } = await import("./autonomy");
+      if (shouldAutoApprove(res.riskTier)) {
+        const { supabase } = await import("@/integrations/supabase/client");
+        await (supabase as any)
+          .from("ai_action_plans")
+          .update({ status: "authorized", decided_at: new Date().toISOString() })
+          .eq("id", res.planId);
+        const { executePlan } = await import("./execution");
+        const exec = await executePlan(res.planId);
+        return JSON.stringify({
+          proposed: true,
+          auto_approved: true,
+          plan_id: res.planId,
+          executed: exec.executed,
+          failed: exec.failed,
+          message:
+            `Proposta AUTO-APROVADA (autonomia, risco ${res.riskTier}) e executada: ` +
+            `${exec.executed} ação(ões) aplicada(s)${exec.failed ? `, ${exec.failed} com falha` : ""}.`,
+        });
+      }
+
+      return JSON.stringify({
+        proposed: true,
+        plan_id: res.planId,
+        actions_count: res.itemCount,
+        message:
+          `Proposta criada com ${res.itemCount} ação(ões), aguardando aprovação do ` +
+          `usuário em Inteligência > Ações da IA. NADA foi aplicado ao Google Ads.`,
+      });
+    }
+
     // --- Novas ferramentas ---
 
     case "list_keywords": {

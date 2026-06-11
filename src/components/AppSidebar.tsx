@@ -6,7 +6,7 @@ import {
   Users, Target, Settings, Calculator, Zap, Activity, PenTool,
   Clock, FlaskConical, ShieldCheck, Bell, BarChart3,
   Bot, ChevronDown, BookOpen, Plug, Store,
-  Search, Lightbulb, Radar,
+  Search, Lightbulb, Radar, Gauge, ListChecks,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -49,6 +49,7 @@ const groups: { label: string; icon: React.ElementType; items: NavItem[] }[] = [
     icon: Bot,
     items: [
       { title: "Assistente IA", url: "/ai/agent", icon: Bot },
+      { title: "Acoes da IA", url: "/ai/actions", icon: ListChecks },
 
       { title: "Otimizador", url: "/ai/optimizer", icon: Zap },
       { title: "Diagnostico", url: "/ai/diagnostic", icon: Activity },
@@ -74,6 +75,7 @@ const groups: { label: string; icon: React.ElementType; items: NavItem[] }[] = [
     items: [
       { title: "Relatorios", url: "/reports", icon: BarChart3 },
       { title: "Historico", url: "/activity", icon: Clock },
+      { title: "Auditoria IA", url: "/ai/audit", icon: Gauge },
     ],
   },
 ];

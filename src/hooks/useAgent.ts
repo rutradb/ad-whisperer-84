@@ -1,11 +1,11 @@
 import { useState, useCallback, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { supabase } from "@/integrations/supabase/client";
 import { EXPANDED_TOOLS } from "@/lib/agent/expanded-tools";
-import { executeExpandedToolCall } from "@/lib/agent/expanded-executor";
+import { executeToolViaGateway } from "@/lib/agent/mcp/gateway";
 import { buildSpecializedPrompt } from "@/lib/agent/agentProfiles";
 import { useBusinessContextStore } from "@/store/useBusinessContextStore";
 
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-20250514";
 
 export interface ToolAction {
@@ -54,15 +54,12 @@ export function useAgent() {
         let loopMessages = [...apiHistoryRef.current];
 
         while (true) {
-          const response = await fetch(ANTHROPIC_API_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": anthropicApiKey,
-              "anthropic-version": "2023-06-01",
-              "anthropic-dangerous-direct-browser-access": "true",
-            },
-            body: JSON.stringify({
+          // O loop continua sendo orquestrado no cliente, mas a chamada ao
+          // modelo passa pela edge function `agent-run` — a chave Anthropic
+          // nunca trafega direto do browser para a API.
+          const { data, error } = await supabase.functions.invoke<any>("agent-run", {
+            body: {
+              apiKey: anthropicApiKey,
               model: MODEL,
               max_tokens: 4096,
               system: buildSpecializedPrompt(
@@ -72,15 +69,22 @@ export function useAgent() {
               ),
               tools: EXPANDED_TOOLS,
               messages: loopMessages,
-            }),
+            },
           });
 
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Erro na API Anthropic (${response.status})`);
+          if (error) {
+            let msg = error.message || "Erro ao chamar o agente.";
+            try {
+              const ctx = await (error as any).context?.json?.();
+              if (ctx?.error) msg = ctx.error;
+            } catch {
+              // mantém a mensagem padrão
+            }
+            throw new Error(msg);
           }
-
-          const data = await response.json();
+          if (data?.error) {
+            throw new Error(data.error);
+          }
 
           if (data.stop_reason !== "tool_use") {
             const text = data.content?.find((c: any) => c.type === "text")?.text || "";
@@ -111,7 +115,7 @@ export function useAgent() {
           const toolResultBlocks: any[] = [];
           for (const block of toolUseBlocks) {
             try {
-              const result = await executeExpandedToolCall(
+              const result = await executeToolViaGateway(
                 block.name,
                 block.input,
                 { accountId: selectedAccount.id }

@@ -45,6 +45,8 @@ const AutomatedRulesPage = lazy(() => import("./pages/AutomatedRulesPage"));
 const BusinessContextPage = lazy(() => import("./pages/BusinessContextPage"));
 const ABTestPage = lazy(() => import("./pages/ABTestPage"));
 const AgentPage = lazy(() => import("./pages/AgentPage"));
+const AuditPage = lazy(() => import("./pages/AuditPage"));
+const ActionsPage = lazy(() => import("./pages/ActionsPage"));
 const PixelsPage = lazy(() => import("./pages/PixelsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
@@ -132,6 +134,8 @@ const App = () => (
                 <Route path="/ai/strategy" element={<BusinessContextPage />} />
                 <Route path="/ai/ab-test" element={<ABTestPage />} />
                 <Route path="/ai/agent" element={<AgentPage />} />
+                <Route path="/ai/actions" element={<ActionsPage />} />
+                <Route path="/ai/audit" element={<AuditPage />} />
                 {/* Conversions (redirect from /pixels) */}
                 <Route path="/pixels" element={<PixelsPage />} />
                 <Route path="/conversions" element={<Navigate to="/pixels" replace />} />

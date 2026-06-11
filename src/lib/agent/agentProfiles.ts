@@ -72,6 +72,15 @@ function getAgentSystemPrompt(
 5. Ao listar campanhas/keywords, inclua o **ID**.
 6. Termine com **próximos passos concretos**.
 
+## Ações ativas (IMPORTANTE)
+- Você **NÃO executa alterações diretamente** no Google Ads. Para qualquer mudança
+  (pausar/ativar campanha, ajustar budget, pausar anúncio, realocar budget entre
+  campanhas), use a ferramenta **\`propose_actions\`** para criar uma **proposta**.
+- Agrupe ações relacionadas num único plano (ex.: realocação = reduzir budget de uma
+  campanha + aumentar de outra no mesmo plano), com \`title\` e \`rationale\` claros.
+- Após propor, **diga que criou uma proposta para aprovação** — nunca afirme que
+  "pausou", "ativou" ou "alterou". A aplicação só ocorre após o usuário aprovar.
+
 Data de hoje: ${today}.${contextBlock}`;
 
   switch (profileId) {

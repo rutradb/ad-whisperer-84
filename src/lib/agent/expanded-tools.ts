@@ -164,50 +164,59 @@ export const EXPANDED_TOOLS = [
     },
   },
 
-  // --- Ações de gestão ---
+  // --- Ação ativa: PROPOR alterações (não executa) ---
   {
-    name: "pause_campaigns",
-    description: "Pausa campanhas pelo ID.",
+    name: "propose_actions",
+    description:
+      "Cria uma PROPOSTA de alterações para o usuário aprovar — NÃO executa nada no Google Ads. " +
+      "Use SEMPRE que precisar mudar algo na conta: pausar/ativar campanha, ajustar budget diário, " +
+      "pausar anúncio, ou REALOCAR budget entre campanhas (várias ações num único plano). " +
+      "As ações só são aplicadas após o usuário aprovar. Nunca diga que executou — diga que propôs.",
     input_schema: {
       type: "object",
       properties: {
-        campaign_ids: { type: "array", items: { type: "string" } },
+        title: {
+          type: "string",
+          description: "Título curto do plano (ex.: 'Realocar budget de bleeders para winners').",
+        },
+        rationale: {
+          type: "string",
+          description: "Por que essas ações, sustentado em dados concretos.",
+        },
+        risk_tier: {
+          type: "string",
+          enum: ["low", "medium", "high"],
+          description: "Nível de risco do plano. Padrão: medium.",
+        },
+        actions: {
+          type: "array",
+          description: "Lista de ações atômicas que compõem o plano.",
+          items: {
+            type: "object",
+            properties: {
+              action_type: {
+                type: "string",
+                enum: ["pause_campaign", "activate_campaign", "update_campaign_budget", "pause_ad"],
+                description: "Tipo da ação.",
+              },
+              entity_id: {
+                type: "string",
+                description: "ID da campanha (ou ID do anúncio para pause_ad).",
+              },
+              daily_budget: {
+                type: "number",
+                description: "Novo budget diário em R$ (apenas para update_campaign_budget).",
+              },
+              reason: {
+                type: "string",
+                description: "Justificativa específica desta ação.",
+              },
+            },
+            required: ["action_type", "entity_id"],
+          },
+        },
       },
-      required: ["campaign_ids"],
-    },
-  },
-  {
-    name: "activate_campaigns",
-    description: "Ativa campanhas pausadas pelo ID.",
-    input_schema: {
-      type: "object",
-      properties: {
-        campaign_ids: { type: "array", items: { type: "string" } },
-      },
-      required: ["campaign_ids"],
-    },
-  },
-  {
-    name: "update_campaign_budget",
-    description: "Atualiza o budget diário em Reais.",
-    input_schema: {
-      type: "object",
-      properties: {
-        campaign_id: { type: "string" },
-        daily_budget: { type: "number", description: "Novo budget em R$" },
-      },
-      required: ["campaign_id", "daily_budget"],
-    },
-  },
-  {
-    name: "pause_ads",
-    description: "Pausa anúncios pelo ID.",
-    input_schema: {
-      type: "object",
-      properties: {
-        ad_ids: { type: "array", items: { type: "string" } },
-      },
-      required: ["ad_ids"],
+      required: ["title", "actions"],
     },
   },
 
@@ -239,9 +248,6 @@ export const EXPANDED_TOOL_LABELS: Record<string, string> = {
   get_geographic_performance: "Analisando regiões",
   list_recommendations: "Buscando recomendações do Google",
   list_conversions: "Listando conversões",
-  pause_campaigns: "Pausando campanhas",
-  activate_campaigns: "Ativando campanhas",
-  update_campaign_budget: "Atualizando budget",
-  pause_ads: "Pausando anúncios",
+  propose_actions: "Criando proposta de ações",
   get_change_history: "Buscando histórico de alterações",
 };
