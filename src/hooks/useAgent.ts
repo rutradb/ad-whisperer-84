@@ -6,7 +6,7 @@ import { executeToolViaGateway } from "@/lib/agent/mcp/gateway";
 import { buildSpecializedPrompt } from "@/lib/agent/agentProfiles";
 import { useBusinessContextStore } from "@/store/useBusinessContextStore";
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-sonnet-4-5";
 
 export interface ToolAction {
   toolName: string;
