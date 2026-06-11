@@ -14,6 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_action_items: {
+        Row: {
+          after_state: Json
+          before_state: Json
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          error: Json | null
+          execution_status: string
+          google_result: Json | null
+          id: string
+          plan_id: string
+          position: number
+          resource_name: string | null
+          tool_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          after_state?: Json
+          before_state?: Json
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error?: Json | null
+          execution_status?: string
+          google_result?: Json | null
+          id?: string
+          plan_id: string
+          position?: number
+          resource_name?: string | null
+          tool_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          after_state?: Json
+          before_state?: Json
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error?: Json | null
+          execution_status?: string
+          google_result?: Json | null
+          id?: string
+          plan_id?: string
+          position?: number
+          resource_name?: string | null
+          tool_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ai_action_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_action_outcomes: {
+        Row: {
+          created_at: string
+          id: string
+          measured_at: string
+          metric_after: Json
+          metric_before: Json
+          notes: string | null
+          plan_id: string
+          user_id: string
+          verdict: string | null
+          window_days: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          measured_at?: string
+          metric_after?: Json
+          metric_before?: Json
+          notes?: string | null
+          plan_id: string
+          user_id: string
+          verdict?: string | null
+          window_days?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          measured_at?: string
+          metric_after?: Json
+          metric_before?: Json
+          notes?: string | null
+          plan_id?: string
+          user_id?: string
+          verdict?: string | null
+          window_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_outcomes_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ai_action_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_action_plans: {
+        Row: {
+          created_at: string
+          customer_id: string
+          decided_at: string | null
+          decided_by: string | null
+          estimated_impact: Json
+          executed_at: string | null
+          id: string
+          login_customer_id: string | null
+          rationale: string | null
+          risk_tier: string
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          estimated_impact?: Json
+          executed_at?: string | null
+          id?: string
+          login_customer_id?: string | null
+          rationale?: string | null
+          risk_tier?: string
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          estimated_impact?: Json
+          executed_at?: string | null
+          id?: string
+          login_customer_id?: string | null
+          rationale?: string | null
+          risk_tier?: string
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       automated_rules: {
         Row: {
           action_type: string
@@ -159,6 +322,81 @@ export type Database = {
           variations?: Json
         }
         Relationships: []
+      }
+      mcp_endpoint_invocations: {
+        Row: {
+          action_item_id: string | null
+          created_at: string
+          customer_id: string | null
+          endpoint: string
+          error_code: string | null
+          http_method: string
+          id: string
+          latency_ms: number | null
+          login_customer_id: string | null
+          operation_type: string
+          plan_id: string | null
+          request_hash: string | null
+          request_summary: Json | null
+          response_status: number | null
+          risk_tier: string | null
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          action_item_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          endpoint: string
+          error_code?: string | null
+          http_method?: string
+          id?: string
+          latency_ms?: number | null
+          login_customer_id?: string | null
+          operation_type?: string
+          plan_id?: string | null
+          request_hash?: string | null
+          request_summary?: Json | null
+          response_status?: number | null
+          risk_tier?: string | null
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          action_item_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          endpoint?: string
+          error_code?: string | null
+          http_method?: string
+          id?: string
+          latency_ms?: number | null
+          login_customer_id?: string | null
+          operation_type?: string
+          plan_id?: string | null
+          request_hash?: string | null
+          request_summary?: Json | null
+          response_status?: number | null
+          risk_tier?: string | null
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_endpoint_invocations_action_item_id_fkey"
+            columns: ["action_item_id"]
+            isOneToOne: false
+            referencedRelation: "ai_action_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_endpoint_invocations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ai_action_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
