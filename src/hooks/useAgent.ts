@@ -160,7 +160,7 @@ export function useAgent() {
     apiHistoryRef.current = [];
   }, []);
 
-  const hasApiKey = !!anthropicApiKey;
+  const hasApiKey = true;
   const isConnected = !!selectedAccount;
 
   return {
