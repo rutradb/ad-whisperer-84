@@ -96,6 +96,18 @@ async function deleteConversationRow(id: string): Promise<void> {
   if (error) throw error;
 }
 
+async function renameConversationRow(input: {
+  id: string;
+  title: string;
+}): Promise<void> {
+  const title = input.title.trim().slice(0, 120) || "Nova conversa";
+  const { error } = await db
+    .from("agent_conversations")
+    .update({ title })
+    .eq("id", input.id);
+  if (error) throw error;
+}
+
 // --- Hook para a lista de conversas (sidebar da AgentPage) -----------------
 
 export function useAgentHistory() {
@@ -113,9 +125,17 @@ export function useAgentHistory() {
     },
   });
 
+  const renameMutation = useMutation({
+    mutationFn: renameConversationRow,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agent-conversations"] });
+    },
+  });
+
   return {
     conversations: conversationsQuery.data || [],
     isLoadingConversations: conversationsQuery.isLoading,
     deleteConversation: deleteMutation.mutateAsync,
+    renameConversation: renameMutation.mutateAsync,
   };
 }

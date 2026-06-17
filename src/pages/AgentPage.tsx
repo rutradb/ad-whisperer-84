@@ -7,6 +7,7 @@ import { AGENT_PROFILES } from "@/lib/agent/agentProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,6 +29,8 @@ import {
   Sparkles,
   Plus,
   MessageSquare,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -164,7 +167,7 @@ export default function AgentPage() {
     newConversation,
     loadConversation,
   } = useAgent();
-  const { conversations, deleteConversation } = useAgentHistory();
+  const { conversations, deleteConversation, renameConversation } = useAgentHistory();
   const currentProfile = AGENT_PROFILES.find((p) => p.id === activeProfile) || AGENT_PROFILES[0];
 
   const handleDeleteConversation = async (e: MouseEvent<HTMLButtonElement>, id: string) => {
@@ -172,6 +175,45 @@ export default function AgentPage() {
     await deleteConversation(id);
     if (id === conversationId) newConversation();
   };
+
+  // Renomeação inline de conversas
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const cancelRenameRef = useRef(false); // evita que o onBlur salve após Escape
+
+  const startRename = (e: MouseEvent<HTMLButtonElement>, id: string, title: string) => {
+    e.stopPropagation();
+    cancelRenameRef.current = false;
+    setEditingId(id);
+    setEditingTitle(title);
+  };
+
+  const commitRename = async () => {
+    if (cancelRenameRef.current) {
+      cancelRenameRef.current = false;
+      return;
+    }
+    const id = editingId;
+    if (!id) return;
+    const title = editingTitle.trim();
+    setEditingId(null);
+    const original = conversations.find((c) => c.id === id)?.title;
+    if (title && title !== original) {
+      await renameConversation({ id, title });
+    }
+  };
+
+  const handleRenameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitRename();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelRenameRef.current = true;
+      setEditingId(null);
+    }
+  };
+
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -208,45 +250,86 @@ export default function AgentPage() {
             <Plus className="h-3.5 w-3.5" /> Nova
           </Button>
         </div>
-        <ScrollArea className="flex-1">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="space-y-1 p-2">
             {conversations.length === 0 && (
               <p className="px-2 py-6 text-center text-xs text-muted-foreground">
                 Nenhuma conversa ainda
               </p>
             )}
-            {conversations.map((c) => (
+            {conversations.map((c) => {
+              const isEditing = editingId === c.id;
+              return (
               <div
                 key={c.id}
-                onClick={() => loadConversation(c.id, c.profile)}
+                onClick={() => {
+                  if (!isEditing) loadConversation(c.id, c.profile);
+                }}
                 className={cn(
                   "group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 transition-colors",
                   conversationId === c.id ? "bg-accent" : "hover:bg-muted"
                 )}
               >
                 <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium">{c.title}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {new Date(c.created_at).toLocaleString("pt-BR", { 
-                      day: "2-digit", 
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
-                  </p>
-                </div>
-                <button
-                  onClick={(e) => handleDeleteConversation(e, c.id)}
-                  className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                  aria-label="Excluir conversa"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+
+                {isEditing ? (
+                  <>
+                    <Input
+                      autoFocus
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={handleRenameKeyDown}
+                      onBlur={commitRename}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-7 flex-1 text-xs"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        commitRename();
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Salvar nome"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">{c.title}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(c.created_at).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        onClick={(e) => startRename(e, c.id, c.title)}
+                        className="rounded p-1 text-muted-foreground hover:text-foreground"
+                        aria-label="Renomear conversa"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteConversation(e, c.id)}
+                        className="rounded p-1 text-muted-foreground hover:text-destructive"
+                        aria-label="Excluir conversa"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
-        </ScrollArea>
+        </div>
       </aside>
 
       {/* Coluna do chat */}
