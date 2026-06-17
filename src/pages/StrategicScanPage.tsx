@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useStrategicScan } from "@/hooks/useStrategicScan";
+import { useStrategicScanHistory } from "@/hooks/useStrategicScanHistory";
 import type { DateRange } from "@/lib/google-ads/types";
 import type { Recommendation } from "@/lib/strategic-scan";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,9 +10,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { ConnectionBanner } from "@/components/ConnectionBanner";
+import { cn } from "@/lib/utils";
 import {
   Radar, Sparkles, AlertTriangle, TrendingUp, Target, Gauge,
-  Cpu, ListChecks, ShieldAlert, KeyRound,
+  Cpu, ListChecks, ShieldAlert, KeyRound, History, Trash2,
 } from "lucide-react";
 
 const PERIODS: { label: string; value: DateRange }[] = [
@@ -48,8 +50,14 @@ const SEVERITY_CLASS: Record<string, string> = {
 };
 
 export default function StrategicScanPage() {
-  const { result, isLoading, error, hasApiKey, isConnected, run } = useStrategicScan();
+  const { result, currentScanId, isLoading, error, hasApiKey, isConnected, run, loadScan } = useStrategicScan();
+  const { scans, deleteScan } = useStrategicScanHistory();
   const [period, setPeriod] = useState<DateRange>("LAST_30_DAYS");
+
+  const handleDeleteScan = async (e: MouseEvent<HTMLButtonElement>, id: string) => {
+    e.stopPropagation();
+    await deleteScan(id);
+  };
 
   if (!isConnected) {
     return (
@@ -105,6 +113,55 @@ export default function StrategicScanPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Histórico de varreduras */}
+      {scans.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History className="h-4 w-4" /> Histórico de varreduras
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {scans.map((s) => (
+              <div
+                key={s.id}
+                onClick={() => loadScan(s.id)}
+                className={cn(
+                  "group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors",
+                  currentScanId === s.id ? "border-primary bg-accent" : "hover:bg-muted",
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{s.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(s.created_at).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {s.date_range ? ` · ${s.date_range}` : ""}
+                  </p>
+                </div>
+                {s.complexity && (
+                  <Badge variant="outline" className="shrink-0">
+                    {COMPLEXITY_LABEL[s.complexity] ?? s.complexity}
+                  </Badge>
+                )}
+                <button
+                  onClick={(e) => handleDeleteScan(e, s.id)}
+                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  aria-label="Excluir varredura"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Alert variant="destructive">

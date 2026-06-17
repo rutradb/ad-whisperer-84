@@ -3,6 +3,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useBusinessContextStore } from "@/store/useBusinessContextStore";
 import { buildBusinessContextBlock } from "@/lib/agent/buildBusinessContextBlock";
 import { runAnthropicText } from "@/lib/ai/anthropicProxy";
+import { supabase } from "@/integrations/supabase/client";
 
 export type InsightType = "warning" | "opportunity" | "info" | "action";
 
@@ -42,8 +43,47 @@ RETORNE APENAS um array JSON. Cada objeto:
 
 Apenas JSON array. Sem markdown.`;
 
-export function useAIInsights() {
-  const { anthropicApiKey } = useAuthStore();
+// Cache do último resultado por (conta + contexto). Tabela fora dos types
+// gerados → cast `(supabase as any)`. Degrada graciosamente: se a tabela não
+// existir ou der erro, simplesmente regenera (comportamento anterior).
+const db = supabase as any;
+
+async function fetchInsightsCache(customerId: string, context: string): Promise<Insight[] | null> {
+  try {
+    const { data, error } = await db
+      .from("ai_insights")
+      .select("insights")
+      .eq("customer_id", customerId)
+      .eq("context", context)
+      .maybeSingle();
+    if (error) return null;
+    return (data?.insights as Insight[]) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function upsertInsightsCache(
+  userId: string,
+  customerId: string,
+  context: string,
+  insights: Insight[],
+  prompt: string,
+): Promise<void> {
+  await db
+    .from("ai_insights")
+    .upsert(
+      { user_id: userId, customer_id: customerId, context, insights, prompt },
+      { onConflict: "user_id,customer_id,context" },
+    );
+}
+
+/**
+ * @param context Escopo dos insights (ex.: "Dashboard", "Campanhas"). Junto com
+ * a conta selecionada, identifica o cache do último resultado.
+ */
+export function useAIInsights(context?: string) {
+  const { anthropicApiKey, selectedCustomer } = useAuthStore();
   const businessContext = useBusinessContextStore();
   const [insights, setInsights] = useState<Insight[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,19 +92,28 @@ export function useAIInsights() {
   const hasGeneratedRef = useRef(false);
 
   const hasApiKey = !!anthropicApiKey;
+  const customerId = selectedCustomer?.id ?? null;
+  const canCache = !!(customerId && context);
 
-  const generate = useCallback(
-    async (prompt: string) => {
+  const run = useCallback(
+    async (prompt: string, opts?: { force?: boolean }) => {
       if (!anthropicApiKey || !prompt) return;
-      if (hasGeneratedRef.current) return;
-      hasGeneratedRef.current = true;
 
       setIsLoading(true);
       setError(null);
 
-      const systemPrompt = BASE_SYSTEM_PROMPT + "\n\n" + buildBusinessContextBlock(businessContext);
-
       try {
+        // Cache-first: a menos que seja um refresh forçado, mostra o último
+        // resultado salvo para (conta + contexto) sem gastar tokens.
+        if (!opts?.force && canCache) {
+          const cached = await fetchInsightsCache(customerId!, context!);
+          if (cached && cached.length) {
+            setInsights(cached);
+            return;
+          }
+        }
+
+        const systemPrompt = BASE_SYSTEM_PROMPT + "\n\n" + buildBusinessContextBlock(businessContext);
         const text = await runAnthropicText({
           apiKey: anthropicApiKey,
           system: systemPrompt,
@@ -77,6 +126,16 @@ export function useAIInsights() {
 
         const parsed: Insight[] = JSON.parse(jsonMatch[0]);
         setInsights(parsed);
+
+        // Persiste no cache (não-bloqueante).
+        if (canCache) {
+          try {
+            const uid = (await supabase.auth.getSession()).data.session?.user.id ?? null;
+            if (uid) await upsertInsightsCache(uid, customerId!, context!, parsed, prompt);
+          } catch (cacheErr) {
+            console.warn("[useAIInsights] Falha ao salvar cache:", cacheErr);
+          }
+        }
       } catch (err) {
         setError((err as Error).message);
         setInsights(null);
@@ -85,16 +144,25 @@ export function useAIInsights() {
         setIsLoading(false);
       }
     },
-    [anthropicApiKey, businessContext],
+    [anthropicApiKey, businessContext, canCache, customerId, context],
+  );
+
+  const generate = useCallback(
+    (prompt: string) => {
+      if (hasGeneratedRef.current) return;
+      hasGeneratedRef.current = true;
+      run(prompt);
+    },
+    [run],
   );
 
   const refresh = useCallback(
     (prompt: string) => {
-      hasGeneratedRef.current = false;
+      hasGeneratedRef.current = true;
       setInsights(null);
-      generate(prompt);
+      run(prompt, { force: true });
     },
-    [generate],
+    [run],
   );
 
   return { insights, isLoading, error, hasApiKey, generate, refresh };

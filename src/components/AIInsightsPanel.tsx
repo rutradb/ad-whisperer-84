@@ -133,7 +133,7 @@ function LoadingState() {
 
 export function AIInsightsPanel({ prompt, context, className }: AIInsightsPanelProps) {
   const navigate = useNavigate();
-  const { insights, isLoading, error, hasApiKey, generate, refresh } = useAIInsights();
+  const { insights, isLoading, error, hasApiKey, generate, refresh } = useAIInsights(context);
 
   useEffect(() => {
     if (prompt) generate(prompt);

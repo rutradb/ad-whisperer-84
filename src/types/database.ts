@@ -55,3 +55,25 @@ export interface AgentMessageRow {
   tool_actions: AgentToolAction[];
   created_at: string;
 }
+
+export interface StrategicScanRow {
+  id: string;
+  user_id: string;
+  customer_id: string | null;
+  title: string;
+  date_range: string | null;
+  complexity: string | null;
+  result: unknown; // ScanResult (de @/lib/strategic-scan)
+  created_at: string;
+}
+
+export interface AIInsightsCacheRow {
+  id: string;
+  user_id: string;
+  customer_id: string;
+  context: string;
+  insights: unknown[]; // Insight[] (de @/hooks/useAIInsights)
+  prompt: string | null;
+  created_at: string;
+  updated_at: string;
+}
