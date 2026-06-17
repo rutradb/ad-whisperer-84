@@ -228,7 +228,12 @@ export default function AgentPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium">{c.title}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {new Date(c.updated_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                    {new Date(c.created_at).toLocaleString("pt-BR", { 
+                      day: "2-digit", 
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
                   </p>
                 </div>
                 <button
