@@ -328,8 +328,10 @@ function heuristicComplexity(payload: ScanPayload): Complexity {
 }
 
 function strategyModelFor(c: Complexity): { key: keyof typeof MODELS; model: string } {
-  if (c === "high") return { key: "opus", model: MODELS.opus };
-  if (c === "medium") return { key: "sonnet", model: MODELS.sonnet };
+  // high e medium usam Sonnet 4.6 (rápido e cabe no wall-clock do edge); o
+  // "high" se diferencia pelo effort (ver abaixo). Opus segue disponível sob
+  // demanda via options.forceModel para quem quiser o scan mais profundo.
+  if (c === "high" || c === "medium") return { key: "sonnet", model: MODELS.sonnet };
   return { key: "haiku", model: MODELS.haiku };
 }
 
@@ -407,7 +409,6 @@ Deno.serve(async (req) => {
       ? { key: payload.options.forceModel, model: MODELS[payload.options.forceModel] }
       : strategyModelFor(complexity);
 
-    const isOpus = route.key === "opus";
     const isHaiku = route.key === "haiku";
 
     // ---- Pass 2: Análise profunda — modelo + esforço escalam com a complexidade
@@ -427,8 +428,10 @@ Deno.serve(async (req) => {
       user: strategyUser,
       maxTokens: isHaiku ? 4000 : 8000,
       schema: STRATEGY_SCHEMA,
-      // effort/thinking apenas em sonnet/opus
-      effort: isHaiku ? undefined : isOpus ? "high" : "medium",
+      // effort/thinking apenas em sonnet/opus; o esforço escala com a
+      // COMPLEXIDADE (não com o modelo), então "high" continua usando effort
+      // alto mesmo agora rodando em Sonnet 4.6.
+      effort: isHaiku ? undefined : complexity === "high" ? "high" : "medium",
       thinking: !isHaiku,
     });
 
