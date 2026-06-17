@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent, MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAgent, type AgentMessage } from "@/hooks/useAgent";
+import { useAgentHistory } from "@/hooks/useAgentHistory";
 import { EXPANDED_TOOL_LABELS } from "@/lib/agent/expanded-tools";
 import { AGENT_PROFILES } from "@/lib/agent/agentProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -25,6 +26,8 @@ import {
   CheckCircle2,
   XCircle,
   Sparkles,
+  Plus,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -148,9 +151,27 @@ function TypingIndicator() {
 
 export default function AgentPage() {
   const { selectedCustomer: selectedCustomer } = useAuthStore();
-  const { messages, isLoading, hasApiKey, isConnected, activeProfile, sendMessage, switchProfile, clearHistory } =
-    useAgent();
+  const {
+    messages,
+    isLoading,
+    hasApiKey,
+    isConnected,
+    activeProfile,
+    conversationId,
+    sendMessage,
+    switchProfile,
+    clearHistory,
+    newConversation,
+    loadConversation,
+  } = useAgent();
+  const { conversations, deleteConversation } = useAgentHistory();
   const currentProfile = AGENT_PROFILES.find((p) => p.id === activeProfile) || AGENT_PROFILES[0];
+
+  const handleDeleteConversation = async (e: MouseEvent<HTMLButtonElement>, id: string) => {
+    e.stopPropagation();
+    await deleteConversation(id);
+    if (id === conversationId) newConversation();
+  };
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -178,7 +199,53 @@ export default function AgentPage() {
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -mx-6 -my-6">
+    <div className="flex h-[calc(100vh-4rem)] -mx-6 -my-6">
+      {/* Sidebar: histórico de conversas */}
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r bg-background">
+        <div className="flex items-center justify-between border-b px-3 py-3 shrink-0">
+          <span className="text-sm font-semibold">Conversas</span>
+          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={newConversation}>
+            <Plus className="h-3.5 w-3.5" /> Nova
+          </Button>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="space-y-1 p-2">
+            {conversations.length === 0 && (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                Nenhuma conversa ainda
+              </p>
+            )}
+            {conversations.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => loadConversation(c.id, c.profile)}
+                className={cn(
+                  "group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 transition-colors",
+                  conversationId === c.id ? "bg-accent" : "hover:bg-muted"
+                )}
+              >
+                <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium">{c.title}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {new Date(c.updated_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => handleDeleteConversation(e, c.id)}
+                  className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  aria-label="Excluir conversa"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      </aside>
+
+      {/* Coluna do chat */}
+      <div className="flex min-w-0 flex-1 flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b bg-background px-6 py-4 shrink-0">
         <div className="flex items-center gap-3">
@@ -377,6 +444,7 @@ export default function AgentPage() {
             </Button>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -28,3 +28,30 @@ export interface CopyHistoryRow {
   variation_count: number;
   created_at: string;
 }
+
+export interface AgentToolAction {
+  toolName: string;
+  input: Record<string, unknown>;
+  result: string;
+  status: "success" | "error";
+}
+
+export interface AgentConversationRow {
+  id: string;
+  user_id: string;
+  customer_id: string | null;
+  profile: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentMessageRow {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  role: "user" | "assistant";
+  content: string;
+  tool_actions: AgentToolAction[];
+  created_at: string;
+}
