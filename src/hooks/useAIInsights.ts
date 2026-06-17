@@ -2,9 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBusinessContextStore } from "@/store/useBusinessContextStore";
 import { buildBusinessContextBlock } from "@/lib/agent/buildBusinessContextBlock";
-
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-6";
+import { runAnthropicText } from "@/lib/ai/anthropicProxy";
 
 export type InsightType = "warning" | "opportunity" | "info" | "action";
 
@@ -67,26 +65,13 @@ export function useAIInsights() {
       const systemPrompt = BASE_SYSTEM_PROMPT + "\n\n" + buildBusinessContextBlock(businessContext);
 
       try {
-        const response = await fetch(ANTHROPIC_API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": anthropicApiKey,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
-          },
-          body: JSON.stringify({
-            model: MODEL,
-            max_tokens: 1000,
-            system: systemPrompt,
-            messages: [{ role: "user", content: prompt }],
-          }),
+        const text = await runAnthropicText({
+          apiKey: anthropicApiKey,
+          system: systemPrompt,
+          messages: [{ role: "user", content: prompt }],
+          maxTokens: 1000,
         });
 
-        if (!response.ok) throw new Error(`API error ${response.status}`);
-
-        const data = await response.json();
-        const text = data.content?.[0]?.text ?? "";
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (!jsonMatch) throw new Error("Resposta inválida da IA");
 

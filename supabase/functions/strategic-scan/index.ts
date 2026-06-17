@@ -30,8 +30,8 @@ const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
 // Modelos atuais (ver claude-api skill / models.md)
 const MODELS = {
-  haiku: "claude-haiku-4-5",
-  sonnet: "claude-sonnet-4-5",
+  haiku: "claude-haiku-4-5-20251001",
+  sonnet: "claude-sonnet-4-6",
   opus: "claude-opus-4-8",
 } as const;
 

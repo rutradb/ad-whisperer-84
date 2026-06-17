@@ -1,4 +1,5 @@
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+import { runAnthropicText } from "@/lib/ai/anthropicProxy";
+import { AI_MODELS } from "@/lib/ai/models";
 
 function getAnthropicKey(): string {
   const key = localStorage.getItem("anthropic_api_key");
@@ -97,29 +98,14 @@ function parseCopyResponse(text: string): CopyVariation[] {
 }
 
 export async function generateAdCopy(input: CopyGeneratorInput): Promise<CopyVariation[]> {
-  const response = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": getAnthropicKey(),
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 4096,
-      system: buildSystemPrompt(),
-      messages: [{ role: "user", content: buildUserPrompt(input) }],
-    }),
+  const content = await runAnthropicText({
+    apiKey: getAnthropicKey(),
+    model: AI_MODELS.sonnet,
+    maxTokens: 4096,
+    system: buildSystemPrompt(),
+    messages: [{ role: "user", content: buildUserPrompt(input) }],
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error?.message || `Erro na API Anthropic (${response.status})`);
-  }
-
-  const data = await response.json();
-  const content = data.content?.[0]?.text;
   if (!content) throw new Error("Resposta vazia da IA.");
 
   return parseCopyResponse(content);

@@ -12,8 +12,9 @@ import {
   touchConversation,
   fetchConversationMessages,
 } from "@/hooks/useAgentHistory";
+import { AI_MODELS } from "@/lib/ai/models";
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = AI_MODELS.sonnet;
 
 export interface ToolAction {
   toolName: string;
