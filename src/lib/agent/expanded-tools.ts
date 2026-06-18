@@ -2,6 +2,7 @@
  * Ferramentas expandidas para agentes especializados.
  * Cobrem todo o espectro de dados disponíveis via Google Ads API v23.
  */
+import { HUBSPOT_TOOLS } from "./hubspot-tools";
 
 export const EXPANDED_TOOLS = [
   // --- Dados de conta e campanhas (já existiam) ---
@@ -233,6 +234,9 @@ export const EXPANDED_TOOLS = [
       required: [],
     },
   },
+
+  // --- CRM: HubSpot (correlação de gasto com receita/leads reais) ---
+  ...HUBSPOT_TOOLS,
 ];
 
 export const EXPANDED_TOOL_LABELS: Record<string, string> = {
@@ -250,4 +254,8 @@ export const EXPANDED_TOOL_LABELS: Record<string, string> = {
   list_conversions: "Listando conversões",
   propose_actions: "Criando proposta de ações",
   get_change_history: "Buscando histórico de alterações",
+  get_hubspot_overview: "Consultando deals do HubSpot",
+  correlate_hubspot_with_meta: "Correlacionando HubSpot com campanhas",
+  correlate_hubspot_with_google_ads: "Correlacionando HubSpot com Google Ads",
+  get_hubspot_contacts_count: "Contando contatos do HubSpot",
 };
