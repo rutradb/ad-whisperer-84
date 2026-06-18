@@ -52,6 +52,8 @@ async function fetchDeals(token: string, fromISO: string, toISO: string): Promis
     "hs_analytics_source_data_1",   // campaign name / utm_campaign
     "hs_analytics_source_data_2",   // medium / utm_content
     "hs_deal_stage_probability",
+    "hs_is_closed",                 // flag oficial: deal fechado
+    "hs_is_closed_won",             // flag oficial: fechado ganho
   ];
 
   const body = {
@@ -78,6 +80,21 @@ async function fetchDeals(token: string, fromISO: string, toISO: string): Promis
   }
 
   return all;
+}
+
+/**
+ * Classifica um deal como won/lost/open.
+ * Prioriza as flags oficiais do HubSpot (hs_is_closed_won / hs_is_closed), que
+ * funcionam com qualquer pipeline/idioma; cai para heurística por nome do stage
+ * (incluindo PT-BR) só quando as flags não vêm preenchidas.
+ */
+function dealOutcome(props: Record<string, string | null>): "won" | "lost" | "open" {
+  if (props.hs_is_closed_won === "true") return "won";
+  if (props.hs_is_closed === "true") return "lost";
+  const stage = (props.dealstage ?? "").toLowerCase();
+  if (stage.includes("won") || stage.includes("ganho") || stage === "closedwon") return "won";
+  if (stage.includes("lost") || stage.includes("perdid") || stage === "closedlost") return "lost";
+  return "open";
 }
 
 export async function executeHubSpotTool(
@@ -112,14 +129,13 @@ export async function executeHubSpotTool(
 
       for (const d of deals) {
         const amount = parseFloat(d.properties.amount ?? "0") || 0;
-        const stage  = d.properties.dealstage ?? "";
         totalValue += amount;
 
-        // HubSpot stage names vary per portal; we heuristically detect won/lost
-        if (stage.toLowerCase().includes("won") || stage === "closedwon") {
+        const outcome = dealOutcome(d.properties);
+        if (outcome === "won") {
           wonCount++;
           wonValue += amount;
-        } else if (stage.toLowerCase().includes("lost") || stage === "closedlost") {
+        } else if (outcome === "lost") {
           lostCount++;
         } else {
           openCount++;
@@ -139,8 +155,9 @@ export async function executeHubSpotTool(
       }, null, 2);
     }
 
-    // ── Correlate deals with Meta campaigns via hs_analytics_source ───────
-    case "correlate_hubspot_with_meta": {
+    // ── Correlate deals com campanhas via hs_analytics_source (Google Ads) ──
+    case "correlate_hubspot_with_meta":
+    case "correlate_hubspot_with_google_ads": {
       const fromISO = (input.start_date as string) + "T00:00:00.000Z";
       const toISO   = (input.end_date   as string) + "T23:59:59.999Z";
 
@@ -163,7 +180,6 @@ export async function executeHubSpotTool(
         const source   = d.properties.hs_analytics_source       ?? "(direto)";
         const campaign = d.properties.hs_analytics_source_data_1 ?? null;
         const amount   = parseFloat(d.properties.amount ?? "0") || 0;
-        const stage    = d.properties.dealstage ?? "";
 
         const key = source + (campaign ? ` / ${campaign}` : "");
         if (!bySource[key]) {
@@ -172,10 +188,11 @@ export async function executeHubSpotTool(
         bySource[key].deal_count++;
         bySource[key].total_value += amount;
 
-        if (stage.toLowerCase().includes("won") || stage === "closedwon") {
+        const outcome = dealOutcome(d.properties);
+        if (outcome === "won") {
           bySource[key].won_count++;
           bySource[key].won_value += amount;
-        } else if (stage.toLowerCase().includes("lost") || stage === "closedlost") {
+        } else if (outcome === "lost") {
           bySource[key].lost_count++;
         } else {
           bySource[key].open_count++;
