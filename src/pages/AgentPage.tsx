@@ -12,6 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Bot,
   Send,
   Trash2,
@@ -35,6 +43,14 @@ import {
 import { cn } from "@/lib/utils";
 
 // Quick actions are now dynamic per agent profile
+
+// Perguntas importantes prontas (dropdown no header do chat)
+const IMPORTANT_QUESTIONS = [
+  "Identifique bleeders e proponha pausá-los ou reduzir budget.",
+  "Proponha aumentar o budget dos winners respeitando +20% a cada 3 dias.",
+  "Faça um plano de ação priorizado para a semana: pausar, escalar e realocar.",
+  "Faça uma análise das palavras-chave que devem ser mantidas, retiradas ou pausadas e qual correspondência deve ser usada para cada palavra-chave.",
+];
 
 function ToolActionBadge({ toolName, status }: { toolName: string; status: "success" | "error" }) {
   return (
@@ -370,6 +386,28 @@ export default function AgentPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={!canSend}>
+                <ListFilter className="h-4 w-4" />
+                <span className="hidden sm:inline">Perguntas</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Perguntas importantes</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {IMPORTANT_QUESTIONS.map((q) => (
+                <DropdownMenuItem
+                  key={q}
+                  onClick={() => sendMessage(q)}
+                  className="whitespace-normal text-sm leading-snug"
+                >
+                  {q}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {messages.length > 0 && (
             <Button
               variant="ghost"
