@@ -21,7 +21,7 @@ CONTAINER="${EDGE_CONTAINER:-supabase-edge-functions}"
 TMP_DIR="$(mktemp -d)"
 
 # Funções a deployar. Sobrescreva com:  FUNCS="agent-run strategic-scan" bash deploy-functions.sh
-FUNCS="${FUNCS:-agent-run strategic-scan evaluate-rules google-ads-auth google-ads-proxy shopify-proxy}"
+FUNCS="${FUNCS:-agent-run strategic-scan evaluate-rules google-ads-auth google-ads-proxy shopify-proxy hubspot-proxy}"
 
 echo "==> 1/5 Localizando o volume de functions do container '$CONTAINER'..."
 if ! docker inspect "$CONTAINER" >/dev/null 2>&1; then

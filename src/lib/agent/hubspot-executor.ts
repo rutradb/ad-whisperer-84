@@ -1,35 +1,43 @@
 /**
  * HubSpot in-app executor
  *
- * Uses the HubSpot CRM v3 API directly from the browser.
- * HubSpot Private App tokens support CORS — no proxy needed.
- *
- * Auth: Authorization: Bearer {accessToken}
- * Base URL: https://api.hubapi.com
+ * A HubSpot CRM API NÃO permite chamadas cross-origin do browser (CORS) —
+ * por isso roteamos via edge function `hubspot-proxy` (igual ao Shopify).
+ * O token vai no corpo; a auth da edge é cuidada pelo supabase.functions.invoke.
  */
 
 import { useIntegrationsStore } from "@/store/useIntegrationsStore";
+import { supabase } from "@/integrations/supabase/client";
 
-const BASE_URL = "https://api.hubapi.com";
-
-async function hsGet(token: string, path: string, params: Record<string, string | number> = {}): Promise<unknown> {
-  const url = new URL(`${BASE_URL}${path}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-  const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+async function hsCall(
+  token: string,
+  method: "GET" | "POST",
+  path: string,
+  opts: { params?: Record<string, string | number>; body?: unknown } = {},
+): Promise<unknown> {
+  const { data, error } = await supabase.functions.invoke<any>("hubspot-proxy", {
+    body: { token, method, path, params: opts.params, body: opts.body },
   });
-  if (!res.ok) throw new Error(`HubSpot API ${res.status}`);
-  return res.json();
+  if (error) {
+    let msg = error.message || `HubSpot proxy error`;
+    try {
+      const ctx = await (error as any).context?.json?.();
+      if (ctx?.error) msg = ctx.error;
+      else if (ctx?.message) msg = ctx.message;
+    } catch {
+      // mantém a mensagem padrão
+    }
+    throw new Error(`HubSpot API: ${msg}`);
+  }
+  return data;
 }
 
-async function hsPost(token: string, path: string, body: unknown): Promise<unknown> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`HubSpot API ${res.status}`);
-  return res.json();
+function hsGet(token: string, path: string, params: Record<string, string | number> = {}): Promise<unknown> {
+  return hsCall(token, "GET", path, { params });
+}
+
+function hsPost(token: string, path: string, body: unknown): Promise<unknown> {
+  return hsCall(token, "POST", path, { body });
 }
 
 type HsDeal = {
