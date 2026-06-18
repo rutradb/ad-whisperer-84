@@ -77,3 +77,16 @@ export interface AIInsightsCacheRow {
   created_at: string;
   updated_at: string;
 }
+
+export interface OptimizerRunRow {
+  id: string;
+  user_id: string;
+  customer_id: string | null;
+  campaign_id: string | null;
+  campaign_name: string;
+  date_preset: string | null;
+  cpa_target: number | null;
+  classified: unknown[]; // ClassifiedAd[] (de @/pages/OptimizerPage)
+  crm_context: string | null;
+  created_at: string;
+}

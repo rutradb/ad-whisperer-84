@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { getAdMetrics, getCampaignMetrics } from "@/lib/google-ads/reporting";
-import { updateAdStatus, bulkUpdateStatus } from "@/lib/google-ads/mutations";
+import { executeToolViaGateway } from "@/lib/agent/mcp/gateway";
 import { normalizeMetricsRow, microsToUnits, computeRoas, computeCpa } from "@/lib/google-ads/types";
 import type { MetricsRow, DateRange } from "@/lib/google-ads/types";
 import { CONFIG } from "@/config";
@@ -21,13 +22,16 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  TrendingUp, TrendingDown, Minus, Loader2, Zap, AlertTriangle, ArrowRight,
+  TrendingUp, TrendingDown, Minus, Loader2, Zap, AlertTriangle, ArrowRight, History, Trash2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useIntegrationsStore } from "@/store/useIntegrationsStore";
 import { executeShopifyTool } from "@/lib/agent/shopify-executor";
 import { executePipedriveTool } from "@/lib/agent/pipedrive-executor";
 import { executeHubSpotTool } from "@/lib/agent/hubspot-executor";
+import { supabase } from "@/integrations/supabase/client";
+import { useOptimizerHistory, saveOptimizerRun, fetchOptimizerRun } from "@/hooks/useOptimizerHistory";
 
 const DATE_PRESETS: { label: string; value: DateRange }[] = [
   { label: "7 dias", value: "LAST_7_DAYS" },
@@ -108,7 +112,10 @@ export default function OptimizerPage() {
   const [classified, setClassified] = useState<ClassifiedAd[]>([]);
   const [hasResults, setHasResults] = useState(false);
   const [crmRevenueContext, setCrmRevenueContext] = useState<string | null>(null);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const { shopify, pipedrive, hubspot } = useIntegrationsStore();
+  const queryClient = useQueryClient();
+  const { runs, deleteRun } = useOptimizerHistory();
 
   const { data: campaignsData, isLoading: loadingCampaigns, error: campaignsError } = useCampaigns(customerId ?? undefined, {
     status: "ENABLED" as any,
@@ -173,25 +180,77 @@ export default function OptimizerPage() {
         }
       }
 
-      setCrmRevenueContext(crmLines.length > 0 ? crmLines.join("\n") : null);
+      const crmContext = crmLines.length > 0 ? crmLines.join("\n") : null;
+      setCrmRevenueContext(crmContext);
+
+      // Persiste a análise no histórico (não-bloqueante).
+      try {
+        const uid = (await supabase.auth.getSession()).data.session?.user.id ?? null;
+        if (uid) {
+          const campaignName = (campaignsData || []).find((c: any) => c.id === campaignId)?.name || campaignId;
+          const id = await saveOptimizerRun({
+            userId: uid,
+            customerId,
+            campaignId,
+            campaignName,
+            datePreset: String(datePreset),
+            cpaTarget: parseFloat(cpaTarget) || 30,
+            classified: result,
+            crmContext,
+          });
+          setCurrentRunId(id);
+          queryClient.invalidateQueries({ queryKey: ["optimizer-runs"] });
+        }
+      } catch (persistErr) {
+        console.warn("[Optimizer] Falha ao persistir análise:", persistErr);
+      }
     } catch (err: any) {
       toast({ title: "Erro na analise", description: err.message, variant: "destructive" });
     } finally {
       setIsAnalyzing(false);
     }
-  }, [campaignId, customerId, datePreset, cpaTarget, toast, shopify, pipedrive, hubspot]);
+  }, [campaignId, customerId, datePreset, cpaTarget, toast, shopify, pipedrive, hubspot, campaignsData, queryClient]);
 
   const handlePause = useCallback(async (adId: string) => {
     if (!customerId) return;
     try {
-      const resourceName = `customers/${customerId}/adGroupAds/${adId}`;
-      await updateAdStatus(customerId, resourceName, "PAUSED");
+      // Roteia pelo gateway → executa pause_ads E registra telemetria em mcp_endpoint_invocations
+      await executeToolViaGateway("pause_ads", { ad_ids: [adId] }, { accountId: customerId });
       toast({ title: "Anuncio pausado com sucesso" });
       setClassified(prev => prev.filter(a => a.id !== adId));
     } catch (err: any) {
       toast({ title: "Erro ao pausar", description: err.message, variant: "destructive" });
     }
   }, [customerId, toast]);
+
+  const loadRun = useCallback(async (id: string) => {
+    setIsAnalyzing(true);
+    try {
+      const row = await fetchOptimizerRun(id);
+      if (row) {
+        setClassified((row.classified as ClassifiedAd[]) || []);
+        setCrmRevenueContext(row.crm_context ?? null);
+        if (row.campaign_id) setCampaignId(row.campaign_id);
+        if (row.date_preset) setDatePreset(row.date_preset as DateRange);
+        if (row.cpa_target != null) setCpaTarget(String(row.cpa_target));
+        setHasResults(true);
+        setCurrentRunId(id);
+      }
+    } catch (err) {
+      console.warn("[Optimizer] Falha ao carregar análise:", err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, []);
+
+  const handleDeleteRun = useCallback(
+    async (e: MouseEvent<HTMLButtonElement>, id: string) => {
+      e.stopPropagation();
+      await deleteRun(id);
+      if (id === currentRunId) setCurrentRunId(null);
+    },
+    [deleteRun, currentRunId],
+  );
 
   const bleeders = useMemo(() => classified.filter(a => a.classification === "bleeder"), [classified]);
   const winners = useMemo(() => classified.filter(a => a.classification === "winner"), [classified]);
@@ -271,6 +330,51 @@ Interprete o padrao de performance, priorize as acoes mais impactantes e sugira 
           </div>
         </CardContent>
       </Card>
+
+      {/* Histórico de otimizações */}
+      {runs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History className="h-4 w-4" /> Histórico de otimizações
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {runs.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => loadRun(r.id)}
+                className={cn(
+                  "group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors",
+                  currentRunId === r.id ? "border-primary bg-accent" : "hover:bg-muted",
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{r.campaign_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(r.created_at).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {r.date_preset ? ` · ${r.date_preset}` : ""}
+                    {r.cpa_target != null ? ` · meta CPA R$${r.cpa_target}` : ""}
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => handleDeleteRun(e, r.id)}
+                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  aria-label="Excluir análise"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {isAnalyzing && (
         <div className="space-y-3">
