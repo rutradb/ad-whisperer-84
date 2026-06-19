@@ -90,3 +90,16 @@ export interface OptimizerRunRow {
   crm_context: string | null;
   created_at: string;
 }
+
+export interface DiagnosticRow {
+  id: string;
+  user_id: string;
+  customer_id: string | null;
+  date_preset: string | null;
+  alerts: unknown[]; // DiagnosticAlert[] (de @/pages/DiagnosticPage)
+  total: number;
+  critical: number;
+  warning: number;
+  healthy: number;
+  created_at: string;
+}
