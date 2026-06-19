@@ -385,40 +385,7 @@ export default function AgentPage() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5" disabled={!canSend}>
-                <ListFilter className="h-4 w-4" />
-                <span className="hidden sm:inline">Perguntas</span>
-                <ChevronDown className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Perguntas importantes</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {IMPORTANT_QUESTIONS.map((q) => (
-                <DropdownMenuItem
-                  key={q}
-                  onClick={() => sendMessage(q)}
-                  className="whitespace-normal text-sm leading-snug"
-                >
-                  {q}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={clearHistory}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        
       </div>
 
       {/* Alerts */}
@@ -522,6 +489,7 @@ export default function AgentPage() {
                   {action.label}
                 </Button>
               ))}
+              
             </div>
           )}
 
@@ -543,18 +511,50 @@ export default function AgentPage() {
               rows={2}
               className="resize-none flex-1 text-sm"
             />
-            <Button
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              onClick={handleSend}
-              disabled={!canSend || !input.trim()}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+
+
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1.5" disabled={!canSend}>
+                        {/* <ListFilter className="h-4 w-4" /> */}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-80">
+                      <DropdownMenuLabel>Perguntas importantes</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {IMPORTANT_QUESTIONS.map((q) => (
+                        <DropdownMenuItem
+                          key={q}
+                          onClick={() => sendMessage(q)}
+                          className="whitespace-normal text-sm leading-snug"
+                        >
+                          {q}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+              <Button
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                onClick={handleSend}
+                disabled={!canSend || !input.trim()}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+
+
+            
           </div>
 
           {/* Briefing button (empty state) */}
