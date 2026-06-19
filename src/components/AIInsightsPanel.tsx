@@ -133,11 +133,12 @@ function LoadingState() {
 
 export function AIInsightsPanel({ prompt, context, className }: AIInsightsPanelProps) {
   const navigate = useNavigate();
-  const { insights, isLoading, error, hasApiKey, generate, refresh } = useAIInsights(context);
+  const { insights, isLoading, error, hasApiKey, lastGeneratedAt, loadCached, regenerate } = useAIInsights(context);
 
+  // Carrega o último resultado salvo ao montar/trocar de contexto (NÃO gera).
   useEffect(() => {
-    if (prompt) generate(prompt);
-  }, [prompt]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadCached();
+  }, [loadCached]);
 
   if (!hasApiKey) {
     return (
@@ -166,16 +167,29 @@ export function AIInsightsPanel({ prompt, context, className }: AIInsightsPanelP
           <span className="text-xs font-semibold text-foreground">Análise IA</span>
           {context && <span className="text-xs text-muted-foreground">· {context}</span>}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-          onClick={() => prompt && refresh(prompt)}
-          disabled={isLoading || !prompt}
-          title="Atualizar análise"
-        >
-          <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
-        </Button>
+        <div className="flex items-center gap-2">
+          {lastGeneratedAt && (
+            <span className="text-[11px] text-muted-foreground">
+              Última geração:{" "}
+              {new Date(lastGeneratedAt).toLocaleString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={() => prompt && regenerate(prompt)}
+            disabled={isLoading || !prompt}
+            title={insights && insights.length > 0 ? "Atualizar análise" : "Gerar análise"}
+          >
+            <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
+          </Button>
+        </div>
       </div>
 
       {/* Body */}
@@ -184,7 +198,7 @@ export function AIInsightsPanel({ prompt, context, className }: AIInsightsPanelP
       ) : error ? (
         <div className="px-4 py-6 text-center">
           <p className="text-xs text-muted-foreground">Falha ao gerar análise</p>
-          <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs" onClick={() => prompt && refresh(prompt)}>
+          <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs" onClick={() => prompt && regenerate(prompt)}>
             Tentar novamente
           </Button>
         </div>
@@ -194,7 +208,20 @@ export function AIInsightsPanel({ prompt, context, className }: AIInsightsPanelP
             <InsightCard key={i} insight={insight} />
           ))}
         </div>
-      ) : null}
+      ) : (
+        <div className="px-4 py-6 text-center">
+          <p className="text-xs text-muted-foreground">Nenhuma análise gerada ainda.</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 h-7 text-xs"
+            onClick={() => prompt && regenerate(prompt)}
+            disabled={isLoading || !prompt}
+          >
+            <Sparkles className="mr-1 h-3 w-3" /> Gerar análise
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

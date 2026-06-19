@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBusinessContextStore } from "@/store/useBusinessContextStore";
 import { buildBusinessContextBlock } from "@/lib/agent/buildBusinessContextBlock";
@@ -48,16 +48,19 @@ Apenas JSON array. Sem markdown.`;
 // existir ou der erro, simplesmente regenera (comportamento anterior).
 const db = supabase as any;
 
-async function fetchInsightsCache(customerId: string, context: string): Promise<Insight[] | null> {
+async function fetchInsightsCache(
+  customerId: string,
+  context: string,
+): Promise<{ insights: Insight[]; updatedAt: string } | null> {
   try {
     const { data, error } = await db
       .from("ai_insights")
-      .select("insights")
+      .select("insights, updated_at")
       .eq("customer_id", customerId)
       .eq("context", context)
       .maybeSingle();
-    if (error) return null;
-    return (data?.insights as Insight[]) ?? null;
+    if (error || !data) return null;
+    return { insights: (data.insights as Insight[]) ?? [], updatedAt: data.updated_at as string };
   } catch {
     return null;
   }
@@ -86,33 +89,31 @@ export function useAIInsights(context?: string) {
   const { anthropicApiKey, selectedCustomer } = useAuthStore();
   const businessContext = useBusinessContextStore();
   const [insights, setInsights] = useState<Insight[] | null>(null);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Prevents re-generation when prompt changes mid-load due to async data arrival
-  const hasGeneratedRef = useRef(false);
 
   const hasApiKey = !!anthropicApiKey;
   const customerId = selectedCustomer?.id ?? null;
   const canCache = !!(customerId && context);
 
-  const run = useCallback(
-    async (prompt: string, opts?: { force?: boolean }) => {
-      if (!anthropicApiKey || !prompt) return;
+  // Carrega o último resultado salvo (sem gerar / sem gastar tokens).
+  const loadCached = useCallback(async () => {
+    if (!canCache) return;
+    const cached = await fetchInsightsCache(customerId!, context!);
+    if (cached) {
+      setInsights(cached.insights);
+      setLastGeneratedAt(cached.updatedAt);
+    }
+  }, [canCache, customerId, context]);
 
+  // Gera/atualiza a análise SOB DEMANDA (botão) e persiste no cache.
+  const regenerate = useCallback(
+    async (prompt: string) => {
+      if (!anthropicApiKey || !prompt) return;
       setIsLoading(true);
       setError(null);
-
       try {
-        // Cache-first: a menos que seja um refresh forçado, mostra o último
-        // resultado salvo para (conta + contexto) sem gastar tokens.
-        if (!opts?.force && canCache) {
-          const cached = await fetchInsightsCache(customerId!, context!);
-          if (cached && cached.length) {
-            setInsights(cached);
-            return;
-          }
-        }
-
         const systemPrompt = BASE_SYSTEM_PROMPT + "\n\n" + buildBusinessContextBlock(businessContext);
         const text = await runAnthropicText({
           apiKey: anthropicApiKey,
@@ -126,6 +127,7 @@ export function useAIInsights(context?: string) {
 
         const parsed: Insight[] = JSON.parse(jsonMatch[0]);
         setInsights(parsed);
+        setLastGeneratedAt(new Date().toISOString());
 
         // Persiste no cache (não-bloqueante).
         if (canCache) {
@@ -138,8 +140,6 @@ export function useAIInsights(context?: string) {
         }
       } catch (err) {
         setError((err as Error).message);
-        setInsights(null);
-        hasGeneratedRef.current = false; // allow retry on error
       } finally {
         setIsLoading(false);
       }
@@ -147,23 +147,5 @@ export function useAIInsights(context?: string) {
     [anthropicApiKey, businessContext, canCache, customerId, context],
   );
 
-  const generate = useCallback(
-    (prompt: string) => {
-      if (hasGeneratedRef.current) return;
-      hasGeneratedRef.current = true;
-      run(prompt);
-    },
-    [run],
-  );
-
-  const refresh = useCallback(
-    (prompt: string) => {
-      hasGeneratedRef.current = true;
-      setInsights(null);
-      run(prompt, { force: true });
-    },
-    [run],
-  );
-
-  return { insights, isLoading, error, hasApiKey, generate, refresh };
+  return { insights, isLoading, error, hasApiKey, lastGeneratedAt, loadCached, regenerate };
 }
