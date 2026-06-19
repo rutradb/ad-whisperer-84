@@ -438,7 +438,7 @@ export default function AgentPage() {
                 {currentProfile.quickActions.map((action) => (
                   <button
                     key={action.label}
-                    onClick={() => sendMessage(action.prompt)}
+                    onClick={() => setInput(action.prompt)}
                     className="flex items-center gap-2 rounded-xl border bg-card px-4 py-3 text-left text-sm hover:bg-accent transition-colors"
                   >
                     <Zap className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -472,7 +472,7 @@ export default function AgentPage() {
                 size="sm"
                 className="shrink-0 text-xs h-7"
                 disabled={!canSend}
-                onClick={() => sendMessage(currentProfile.quickActions[0]?.prompt || "Briefing completo")}
+                onClick={() => setInput(currentProfile.quickActions[0]?.prompt || "Briefing completo")}
               >
                 <Sparkles className="h-3 w-3 mr-1" />
                 Briefing
@@ -484,7 +484,7 @@ export default function AgentPage() {
                   size="sm"
                   className="shrink-0 text-xs h-7"
                   disabled={!canSend}
-                  onClick={() => sendMessage(action.prompt)}
+                  onClick={() => setInput(action.prompt)}
                 >
                   {action.label}
                 </Button>
