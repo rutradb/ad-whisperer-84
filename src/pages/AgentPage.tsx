@@ -528,7 +528,7 @@ export default function AgentPage() {
                       {IMPORTANT_QUESTIONS.map((q) => (
                         <DropdownMenuItem
                           key={q}
-                          onClick={() => sendMessage(q)}
+                          onClick={() => setInput(q)}
                           className="whitespace-normal text-sm leading-snug"
                         >
                           {q}
