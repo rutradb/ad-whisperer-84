@@ -13,7 +13,7 @@ import { ConnectionBanner } from "@/components/ConnectionBanner";
 import { AIInsightsPanel } from "@/components/AIInsightsPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
-import { Activity, AlertTriangle, CheckCircle, Eye, Search, TrendingDown } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle, Eye, Search, TrendingDown, Clock } from "lucide-react";
 
 type DiagnosticLevel = "critical" | "warning" | "healthy";
 
@@ -123,7 +123,7 @@ export default function DiagnosticPage() {
 
   const [datePreset, setDatePreset] = useState<DateRange>("LAST_14_DAYS");
 
-  const { data: campaignData, isLoading } = useQuery({
+  const { data: campaignData, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["diagnostic-campaigns", customerId, datePreset],
     queryFn: async () => {
       if (!customerId) return null;
@@ -181,6 +181,19 @@ Interprete os padroes, priorize acoes e sugira estrategias para melhorar a perfo
         <p className="text-muted-foreground">
           Analisa Quality Score, Impression Share e alertas de performance das campanhas
         </p>
+        {!isLoading && campaignData && dataUpdatedAt > 0 && (
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            Gerado em{" "}
+            {new Date(dataUpdatedAt).toLocaleString("pt-BR", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        )}
       </div>
 
       <AIInsightsPanel prompt={insightPrompt} context="Diagnostico da Conta" />
