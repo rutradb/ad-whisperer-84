@@ -247,19 +247,7 @@ Interprete os padroes, priorize acoes e sugira estrategias para melhorar a perfo
         <p className="text-muted-foreground">
           Analisa Quality Score, Impression Share e alertas de performance das campanhas
         </p>
-        {displayCreatedAt && (
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {viewing ? "Diagnóstico salvo · criado em " : "Criado em "}
-            {new Date(displayCreatedAt).toLocaleString("pt-BR", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
-        )}
+        
       </div>
 
       <AIInsightsPanel prompt={insightPrompt} context="Diagnostico da Conta" />
